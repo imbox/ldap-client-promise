@@ -1,0 +1,22 @@
+{
+  "name": "ldap-client-promise",
+  "version": "1.0.0",
+  "description": "Wrapper around ldapjs client with promises",
+  "main": "index.js",
+  "scripts": {
+    "test": "EXIT=0 npm run test:setup || EXIT=$? && npm run test:run || EXIT=$? && npm run test:teardown || EXIT=$? && exit $EXIT",
+    "test:setup": "./test/setup.sh",
+    "test:teardown": "./test/teardown.sh",
+    "test:run": "TZ=UTC mocha --exit ./test/*.spec.js"
+  },
+  "keywords": ["ldap"],
+  "author": "ImBox Sweden AB",
+  "license": "ISC",
+  "dependencies": {
+    "ldapjs": "ldapjs/node-ldapjs#v2.0.0-pre.3"
+  },
+  "devDependencies": {
+    "mocha": "^6.2.2",
+    "should": "^13.2.3"
+  }
+}
