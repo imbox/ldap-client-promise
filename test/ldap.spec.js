@@ -2,6 +2,16 @@
 require('should')
 const Ldap = require('../')
 
+const users = Array.from({ length: 100 }, (x, i) => ({
+  dn: `cn=foo${i},ou=people,dc=planetexpress,dc=com`,
+  entry: {
+    cn: `foo${i}`,
+    sn: 'bar',
+    mail: [`foo${i}@bar.com`],
+    objectclass: ['person', 'inetOrgPerson']
+  }
+}))
+
 describe('ldap-client-promise', function () {
   let client
   beforeEach(async function () {
@@ -41,5 +51,45 @@ describe('ldap-client-promise', function () {
         'cn=admin_staff,ou=people,dc=planetexpress,dc=com',
         'cn=ship_crew,ou=people,dc=planetexpress,dc=com'
       ])
+    results[1].should.deepEqual({
+      objectName: 'cn=Amy Wong+sn=Kroker,ou=people,dc=planetexpress,dc=com',
+      cn: ['Amy Wong'],
+      description: ['Human'],
+      givenName: ['Amy'],
+      mail: ['amy@planetexpress.com'],
+      objectClass: ['top', 'person', 'organizationalPerson', 'inetOrgPerson'],
+      ou: ['Intern'],
+      sn: ['Kroker'],
+      uid: ['amy'],
+      userPassword: ['{ssha}3u3qGBJaLskbPH49RkbQmROGNKEoYNQvdSiNfg==']
+    })
+  })
+
+  it('add/remove users', async function () {
+    await client.add(users[0].dn, users[0].entry)
+    const added = await client.search(users[0].dn, { scope: 'sub' })
+    added.should.containDeep([{ cn: ['foo0'] }])
+
+    await client.del(users[0].dn)
+    const afterDel = await client.search(users[0].dn, { scope: 'sub' })
+
+    afterDel.should.deepEqual([])
+  })
+
+  it('search over large amount of users', async function () {
+    for (const user of users) {
+      try {
+        await client.add(user.dn, user.entry)
+      } catch (e) {}
+    }
+
+    const searchResults = await client.search(
+      'ou=people,dc=planetexpress,dc=com',
+      { scope: 'sub' }
+    )
+    searchResults.length.should.equal(110)
+    for (const user of users) {
+      await client.del(user.dn)
+    }
   })
 })

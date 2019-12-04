@@ -38,18 +38,37 @@ class Ldap extends EventEmitter {
     this.client.on('error', this._boundOnError)
   }
 
-  async search (searchBase, opts) {
-    const { client, _parseAttribute } = this
+  async add (dn, entry) {
+    const self = this
     return new Promise((resolve, reject) => {
-      client.search(searchBase, opts, (err, res) => {
+      self.client.add(dn, entry, err => {
+        err ? reject(err) : resolve()
+      })
+    })
+  }
+
+  async del (dn) {
+    const self = this
+    return new Promise((resolve, reject) => {
+      self.client.del(dn, err => {
+        if (err && err.lde_message !== 'No Such Object') {
+          reject(err)
+        } else {
+          resolve()
+        }
+      })
+    })
+  }
+
+  async search (searchBase, opts) {
+    const self = this
+    return new Promise((resolve, reject) => {
+      self.client.search(searchBase, opts, (err, res) => {
         if (err) return reject(err)
 
         const entries = []
         const onSearchEntry = entry => {
-          entries.push({
-            objectName: entry.objectName,
-            attributes: entry.attributes.map(_parseAttribute)
-          })
+          entries.push(self._parseEntry(entry))
         }
 
         const onError = err => {
@@ -88,6 +107,18 @@ class Ldap extends EventEmitter {
   }
 
   // TODO: extend this with more attribute types...
+  _parseEntry (entry) {
+    const attributes = {}
+    for (const attribute of entry.attributes) {
+      const { type, vals } = this._parseAttribute(attribute)
+      attributes[type] = vals
+    }
+    return {
+      objectName: entry.objectName,
+      ...attributes
+    }
+  }
+
   _parseAttribute (attribute) {
     const { type, _vals } = attribute
     const vals = type.toLowerCase().includes('photo')
